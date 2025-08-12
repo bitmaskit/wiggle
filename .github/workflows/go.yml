@@ -27,4 +27,29 @@ jobs:
         go get -v -t -d ./...
 
     - name: Build
-      run: go build -v ./...
+      run: go build -o wiggle-${{ matrix.os }} -v ./...
+
+    - name: Upload binaries as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: wiggle-binaries-${{ matrix.os }}
+        path: wiggle-${{ matrix.os }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
