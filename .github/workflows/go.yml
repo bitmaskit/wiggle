@@ -3,6 +3,12 @@ name: Go
 on:
   push:
     branches: [ "master" ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -18,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Needed for git history
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -41,7 +47,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
 
     steps:
       - uses: actions/checkout@v4
@@ -51,12 +57,16 @@ jobs:
       - name: Generate semver tag
         id: tag
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          MAJOR=$(echo $LATEST_TAG | cut -d. -f1)
-          MINOR=$(echo $LATEST_TAG | cut -d. -f2)
-          PATCH=$(echo $LATEST_TAG | cut -d. -f3)
-          NEW_TAG="${MAJOR}.${MINOR}.$((PATCH + 1))"
-          echo "tag_name=${NEW_TAG}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "tag_name=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            MAJOR=$(echo $LATEST_TAG | cut -d. -f1)
+            MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+            PATCH=$(echo $LATEST_TAG | cut -d. -f3)
+            NEW_TAG="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            echo "tag_name=${NEW_TAG}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
