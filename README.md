@@ -18,7 +18,5 @@ IDLE_TIMEOUT=10 wiggle
 
 # Using command-line argument
 wiggle 10
-
-# If neither is set, the default idle timeout will be used.
 ```
-
+### If neither is set, the default idle timeout of 60 seconds will be used.
