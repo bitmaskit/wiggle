@@ -65,7 +65,7 @@ func startEventMonitor(eventCh chan<- struct{}, stopCh <-chan struct{}) {
 		defer hook.End()
 		for {
 			select {
-			case ev, ok := <-evChan:
+			case _, ok := <-evChan:
 				if !ok {
 					return
 				}
@@ -80,6 +80,7 @@ func startEventMonitor(eventCh chan<- struct{}, stopCh <-chan struct{}) {
 		}
 	}()
 }
+
 func monitor(ctx context.Context, eventCh <-chan struct{}) {
 	xPrev, yPrev := robotgo.Location()
 	lastMove := time.Now()
