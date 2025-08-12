@@ -8,20 +8,23 @@ on:
     branches: [ "master" ]
 
 jobs:
-
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ macOS-latest, windows-latest ] # ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
     steps:
     - uses: actions/checkout@v4
+
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
-
-    - name: Install Linux dependencies
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install -y libx11-dev libxtst-dev libxt-dev
 
     - name: Build
       run: go build -v ./...
