@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-vgo/robotgo"
+	hook "github.com/robotn/gohook"
 )
 
 var IdleTimeout = 60 * time.Second // Default idle timeout if not set by env or args
@@ -50,14 +51,38 @@ func main() {
 		IdleTimeout, WiggleDuration, PollInterval, Amplitude)
 	fmt.Println("Press Ctrl+C to exit.")
 
-	monitor(ctx)
+	eventCh := make(chan struct{}, 1)
+	stopCh := make(chan struct{})
+	startEventMonitor(eventCh, stopCh)
+	monitor(ctx, eventCh)
+	close(stopCh)
 }
 
-func monitor(ctx context.Context) {
-	// Establish initial position
+func startEventMonitor(eventCh chan<- struct{}, stopCh <-chan struct{}) {
+	go func() {
+		fmt.Println("hook start...")
+		evChan := hook.Start()
+		defer hook.End()
+		for {
+			select {
+			case ev, ok := <-evChan:
+				if !ok {
+					return
+				}
+				// Any keyboard or mouse event resets idle timer
+				select {
+				case eventCh <- struct{}{}:
+				default:
+				}
+			case <-stopCh:
+				return
+			}
+		}
+	}()
+}
+func monitor(ctx context.Context, eventCh <-chan struct{}) {
 	xPrev, yPrev := robotgo.Location()
 	lastMove := time.Now()
-
 	ticker := time.NewTicker(PollInterval)
 	defer ticker.Stop()
 
@@ -72,17 +97,17 @@ func monitor(ctx context.Context) {
 				xPrev, yPrev = x, y
 				continue
 			}
-
 			if time.Since(lastMove) >= IdleTimeout {
-				// Inactivity detected; perform wiggle then reset timer
 				wiggleOnce(ctx)
-				// After wiggle, reset lastMove to now and update previous position
 				xPrev, yPrev = robotgo.Location()
 				lastMove = time.Now()
 			}
+		case <-eventCh:
+			lastMove = time.Now()
 		}
 	}
 }
+
 func wiggleOnce(ctx context.Context) {
 	ox, oy := robotgo.Location()
 	deadline := time.Now().Add(WiggleDuration)
