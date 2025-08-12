@@ -2,7 +2,6 @@ module github.com/bitmaskit/wiggle
 
 go 1.24
 
-
 require (
 	github.com/go-vgo/robotgo v0.110.8
 	github.com/robotn/gohook v0.42.2
